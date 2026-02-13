@@ -15,7 +15,7 @@ body{margin:0;background:transparent;}
   overflow:hidden;
 }
 
-/* 🚐 */
+/* 🚐 Shuttle */
 .shuttle{
   position:absolute;
   bottom:20px;
@@ -24,7 +24,7 @@ body{margin:0;background:transparent;}
   will-change:left, transform;
 }
 
-/* Trail text */
+/* Text trail */
 .trail{
   position:absolute;
   bottom:8px;
@@ -42,7 +42,7 @@ body{margin:0;background:transparent;}
   color:black;
 }
 
-/* House + Plane */
+/* House & Plane */
 .home{
   position:absolute;
   left:0;
@@ -64,27 +64,27 @@ body{margin:0;background:transparent;}
 @media (max-width: 768px){
 
   .track{
-    height:95px;
+    height:85px;
   }
 
   .shuttle{
-    font-size:28px;
-    bottom:14px;
+    font-size:24px;
+    bottom:12px;
   }
 
   .trail{
-    bottom:4px;
-    height:30px;
+    bottom:2px;
+    height:24px;
   }
 
   .trail span{
-    font-size:14px;   /* smaller text on mobile */
-    letter-spacing:0.5px;
+    font-size:11px;   /* MUCH smaller text for mobile */
+    letter-spacing:0.3px;
   }
 
   .home, .air{
-    font-size:18px;
-    bottom:14px;
+    font-size:16px;
+    bottom:12px;
   }
 }
 </style>
@@ -166,7 +166,6 @@ function loop(now){
 
   shuttle.style.left = x + "px";
 
-  /* Flip van depending on direction */
   if(dir === 1){
     shuttle.style.transform = "scaleX(-1)";
   } else {
