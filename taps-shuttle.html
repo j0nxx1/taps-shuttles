@@ -37,8 +37,6 @@
     z-index:3;
     will-change:left;
   }
-
-  /* left-facing version is a mirrored SVG (not a CSS transform) */
   .hidden{ display:none; }
 
   .taps-tail{
@@ -78,8 +76,8 @@
   <div class="taps-end home" aria-hidden="true">🏠</div>
   <div class="taps-end air" aria-hidden="true">✈️</div>
 
-  <!-- RIGHT-FACING SHUTTLE -->
-  <svg class="taps-shuttle" id="shuttleR" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-label="Shuttle">
+  <!-- RIGHT-FACING -->
+  <svg class="taps-shuttle" id="shuttleR" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-label="Shuttle right">
     <rect x="20" y="35" width="150" height="45" rx="12" fill="#111"/>
     <rect x="155" y="45" width="35" height="35" rx="10" fill="#111"/>
     <rect x="35" y="43" width="40" height="20" rx="5" fill="#BFE9FF"/>
@@ -91,8 +89,8 @@
     <circle cx="188" cy="63" r="5" fill="#FFD54A"/>
   </svg>
 
-  <!-- LEFT-FACING SHUTTLE (mirrored by SVG coordinate transform, not CSS scaleX) -->
-  <svg class="taps-shuttle hidden" id="shuttleL" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-label="Shuttle">
+  <!-- LEFT-FACING (mirrored inside SVG, no CSS flip) -->
+  <svg class="taps-shuttle hidden" id="shuttleL" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-label="Shuttle left">
     <g transform="translate(220,0) scale(-1,1)">
       <rect x="20" y="35" width="150" height="45" rx="12" fill="#111"/>
       <rect x="155" y="45" width="35" height="35" rx="10" fill="#111"/>
@@ -125,17 +123,19 @@
     "SEE OUR SUPER DEALS FOR MORE LOCATIONS BELOW!! ✈️"
   ];
 
-  /* ===== TUNE ===== */
-  var legMs     = 12000;  // bigger = slower
-  var pauseMs   = 350;
-  var padL      = 42;
-  var padR      = 42;
+  /* ====== TUNE ====== */
+  var legMs   = 12000;   // bigger = slower travel
+  var pauseMs = 350;
 
-  var tailMax   = 720;
-  var gap       = 100;     // consistent gap both directions
-  var bodyYFrac = 0.60;   // lock to shuttle body
-  var yNudge    = 0;
-  /* ============== */
+  var padL = 42;
+  var padR = 42;
+
+  var gap = 14;          // space between shuttle and text
+  var tailMax = 720;     // cap trail length if you want
+
+  var bodyYFrac = 0.60;  // text vertical alignment
+  var yNudge = 0;
+  /* ================== */
 
   var dir = 1; // 1 right, -1 left
   var idx = 0;
@@ -144,7 +144,9 @@
 
   txt.textContent = lines[0];
 
-  function ease(t){ return 0.5 - 0.5 * Math.cos(Math.PI * t); }
+  function easeInOut(t){
+    return 0.5 - 0.5 * Math.cos(Math.PI * t);
+  }
 
   function setLine(i){
     idx = (i + lines.length) % lines.length;
@@ -152,16 +154,20 @@
     tail.style.width = "0px";
   }
 
+  function show(el){ el.className = el.className.replace("hidden","").trim(); }
+  function hide(el){ if(el.className.indexOf("hidden") === -1) el.className += " hidden"; }
+
   function frame(now){
     if(now < waitUntil){ requestAnimationFrame(frame); return; }
 
-    // choose active shuttle (NO CSS flipping)
+    // Choose active shuttle (stable geometry)
     var active = (dir === 1) ? R : L;
     var other  = (dir === 1) ? L : R;
-    if(other.className.indexOf("hidden") === -1) other.className += " hidden";
-    active.className = active.className.replace("hidden","").trim();
+    show(active); hide(other);
 
     var trackW = track.clientWidth;
+
+    // Use active width (same anyway)
     var sW = active.getBoundingClientRect().width || 72;
 
     var minX = padL;
@@ -170,42 +176,49 @@
     var t = (now - start) / legMs;
     if(t > 1) t = 1;
 
-    var e = ease(t);
+    var e = easeInOut(t);
+
+    // Shuttle X (eased)
     var travelT = (dir === 1) ? e : (1 - e);
     var x = minX + (maxX - minX) * travelT;
 
-    // position BOTH so swapping is seamless
+    // Position both (swap is seamless)
     R.style.left = x + "px";
     L.style.left = x + "px";
 
-    // measure after positioning (stable!)
+    // Measure AFTER positioning
     var sr = active.getBoundingClientRect();
     var tr = track.getBoundingClientRect();
 
-    // vertical lock
+    // Vertical lock tail to shuttle body
     var centerY = (sr.top - tr.top) + (sr.height * bodyYFrac) + yNudge;
     var tailH = tail.getBoundingClientRect().height || 30;
     tail.style.top = Math.max(0, centerY - tailH/2) + "px";
 
-    // tail length
-    var desiredW = tailMax * e;
-
+    // ✅ THIS IS THE IMPORTANT PART:
+    // Trail width is based on ACTUAL PIXEL DISTANCE, so reveal speed matches shuttle speed.
     if(dir === 1){
-      // moving RIGHT: tail sits LEFT of the shuttle (ends at shuttle left - gap)
+      // moving RIGHT: trail ends at shuttle left minus gap, starts at minX
       var endX = (sr.left - tr.left) - gap;
-      var w = Math.min(desiredW, Math.max(0, endX));
+      var w = Math.max(0, endX - minX);
+      if(w > tailMax) w = tailMax;
+
+      tail.style.left = minX + "px";
       tail.style.width = w + "px";
-      tail.style.left = (endX - w) + "px";
       tail.style.textAlign = "right";
     } else {
-      // moving LEFT: tail sits RIGHT of the shuttle (starts at shuttle right + gap)
+      // moving LEFT: trail starts at shuttle right plus gap, ends at (maxX + sW)
       var startX = (sr.right - tr.left) + gap;
-      var w2 = Math.min(desiredW, Math.max(0, trackW - startX));
-      tail.style.width = w2 + "px";
+      var rightEdge = maxX + sW;
+      var w2 = Math.max(0, rightEdge - startX);
+      if(w2 > tailMax) w2 = tailMax;
+
       tail.style.left = startX + "px";
+      tail.style.width = w2 + "px";
       tail.style.textAlign = "left";
     }
 
+    // Turnaround
     if(t >= 1){
       dir *= -1;
       start = now;
