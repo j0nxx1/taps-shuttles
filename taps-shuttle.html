@@ -1,92 +1,10 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-
-<style>
-body{margin:0;background:transparent;}
-
-.track{
-  position:relative;
-  width:100%;
-  height:120px;
-  overflow:hidden;
-}
-
-/* End icons */
-.end{
-  position:absolute;
-  bottom:6px;
-  font-size:28px;
-  user-select:none;
-}
-.home{left:0;}
-.air{right:0;}
-
-/* 🚐 Shuttle */
-.shuttle{
-  position:absolute;
-  bottom:10px;
-  font-size:36px;   /* size of van */
-  z-index:3;
-  user-select:none;
-}
-.hidden{display:none;}
-
-.trail{
-  position:absolute;
-  height:40px;
-  overflow:hidden;
-  z-index:2;
-  pointer-events:none;
-  box-sizing:border-box;
-  padding:0 6px;
-}
-
-.trail span{
-  display:block;
-  white-space:nowrap;
-  font-family:'Inter',sans-serif;
-  font-size:20px;   /* bigger text */
-  font-weight:400;
-  letter-spacing:0.8px;
-  text-transform:uppercase;
-
-  color:black;
-  -webkit-text-stroke:1.2px black;
-  text-shadow:
-    -1px -1px 0 #000,
-     1px -1px 0 #000,
-    -1px  1px 0 #000,
-     1px  1px 0 #000;
-}
-</style>
-</head>
-<body>
-
-<div class="track" id="track">
-  <div class="trail" id="trail"><span id="text"></span></div>
-
-  <div class="end home">🏠</div>
-  <div class="end air">✈️</div>
-
-  <!-- Right direction van -->
-  <div class="shuttle" id="shuttleR">🚐</div>
-
-  <!-- Left direction van (flipped with CSS) -->
-  <div class="shuttle hidden" id="shuttleL" style="transform:scaleX(-1);">🚐</div>
-</div>
-
 <script>
 (function(){
 
 var track = document.getElementById("track");
 var trail = document.getElementById("trail");
 var text  = document.getElementById("text");
-var R     = document.getElementById("shuttleR");
-var L     = document.getElementById("shuttleL");
+var shuttle = document.getElementById("shuttle");
 
 var lines = [
   "WELCOME TO TAPS SHUTTLES",
@@ -98,13 +16,11 @@ var lines = [
   "SEE OUR SUPER DEALS FOR MORE LOCATIONS BELOW!! ✈️"
 ];
 
-/* ===== TUNE ===== */
-var legMs   = 12000;   // shuttle speed
+var legMs   = 12000;
 var pauseMs = 350;
 var padL    = 42;
 var padR    = 42;
-var gap     = 12;      // spacing from shuttle
-/* ============== */
+var gap     = 14;
 
 var dir = 1;
 var idx = 0;
@@ -115,8 +31,6 @@ var legOrigin = null;
 text.textContent = lines[0];
 
 function ease(t){ return 0.5 - 0.5*Math.cos(Math.PI*t); }
-function show(el){ el.classList.remove("hidden"); }
-function hide(el){ el.classList.add("hidden"); }
 
 function setLine(i){
   idx = (i + lines.length) % lines.length;
@@ -124,8 +38,8 @@ function setLine(i){
   trail.style.width = "0px";
 }
 
-function resetOrigin(active, tr){
-  var sr = active.getBoundingClientRect();
+function resetOrigin(tr){
+  var sr = shuttle.getBoundingClientRect();
   if(dir === 1){
     legOrigin = (sr.left - tr.left) - gap;
   } else {
@@ -140,13 +54,8 @@ function loop(now){
     return;
   }
 
-  var active = (dir === 1) ? R : L;
-  var other  = (dir === 1) ? L : R;
-  show(active);
-  hide(other);
-
   var trackW = track.clientWidth;
-  var sW = active.getBoundingClientRect().width;
+  var sW = shuttle.getBoundingClientRect().width;
 
   var minX = padL;
   var maxX = Math.max(minX, trackW - sW - padR);
@@ -158,14 +67,13 @@ function loop(now){
   var travelT = (dir === 1) ? p : (1 - p);
   var x = minX + (maxX - minX) * travelT;
 
-  R.style.left = x + "px";
-  L.style.left = x + "px";
+  shuttle.style.left = x + "px";
 
   var tr = track.getBoundingClientRect();
-  var sr = active.getBoundingClientRect();
+  var sr = shuttle.getBoundingClientRect();
 
   if(legOrigin === null){
-    resetOrigin(active, tr);
+    resetOrigin(tr);
     trail.style.width = "0px";
   }
 
@@ -198,6 +106,3 @@ requestAnimationFrame(loop);
 
 })();
 </script>
-
-</body>
-</html>
