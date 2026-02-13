@@ -20,11 +20,12 @@ body{margin:0;background:transparent;}
   bottom:20px;
   font-size:40px;
   user-select:none;
+  will-change:left, transform;
 }
 
 .trail{
   position:absolute;
-  bottom:28px;   /* adjust this if needed */
+  bottom:20px;   /* LOWERED text */
   height:40px;
   overflow:hidden;
   pointer-events:none;
@@ -39,8 +40,19 @@ body{margin:0;background:transparent;}
   color:black;
 }
 
-.home{position:absolute;left:0;bottom:8px;font-size:26px;}
-.air{position:absolute;right:0;bottom:8px;font-size:26px;}
+.home{
+  position:absolute;
+  left:0;
+  bottom:8px;
+  font-size:26px;
+}
+
+.air{
+  position:absolute;
+  right:0;
+  bottom:8px;
+  font-size:26px;
+}
 </style>
 </head>
 <body>
@@ -75,7 +87,7 @@ var lines = [
   "TE AROHA → AUCKLAND AIRPORT FROM $230"
 ];
 
-var legMs = 10000;
+var legMs = 10000;     // speed
 var pauseMs = 300;
 var padding = 40;
 var gap = 14;
@@ -119,6 +131,13 @@ function loop(now){
   var x = minX + (maxX - minX) * travelT;
 
   shuttle.style.left = x + "px";
+
+  /* 🔁 Flip van correctly depending on direction */
+  if(dir === 1){
+    shuttle.style.transform = "scaleX(-1)";
+  } else {
+    shuttle.style.transform = "scaleX(1)";
+  }
 
   var shuttleRect = shuttle.getBoundingClientRect();
   var trackRect = track.getBoundingClientRect();
