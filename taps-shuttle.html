@@ -13,7 +13,7 @@
   .taps-track{
     position:relative;
     width:100%;
-    height:110px;
+    height:120px;
     overflow:hidden;
     background:transparent;
   }
@@ -38,7 +38,6 @@
     will-change:left,transform;
   }
 
-  /* Trail container */
   .taps-tail{
     position:absolute;
     height:30px;
@@ -46,7 +45,7 @@
     z-index:2;
     pointer-events:none;
     box-sizing:border-box;
-    padding:0 6px; /* small safety padding */
+    padding:0 6px;
   }
 
   .taps-tail .txt{
@@ -66,11 +65,6 @@
       -1px  1px 0 #000,
        1px  1px 0 #000;
   }
-
-  @media (prefers-reduced-motion: reduce){
-    .taps-shuttle{position:static;transform:none !important;}
-    .taps-tail{position:static;width:auto !important;height:auto;overflow:visible;}
-  }
 </style>
 </head>
 <body>
@@ -81,7 +75,6 @@
   <div class="taps-end home" aria-hidden="true">🏠</div>
   <div class="taps-end air" aria-hidden="true">✈️</div>
 
-  <!-- Shuttle SVG (consistent direction when flipped) -->
   <svg class="taps-shuttle" id="tapsShuttle" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-label="Shuttle">
     <rect x="20" y="35" width="150" height="45" rx="12" fill="#111"/>
     <rect x="155" y="45" width="35" height="35" rx="10" fill="#111"/>
@@ -112,21 +105,21 @@
     "SEE OUR SUPER DEALS FOR MORE LOCATIONS BELOW!! ✈️"
   ];
 
-  // --- TUNE ---
+  /* --- TUNE --- */
   var legDurationMs = 12000;   // bigger = slower
-  var edgePauseMs   = 350;     // pause at each end
+  var edgePauseMs   = 350;
   var leftPadPx     = 42;
   var rightPadPx    = 42;
+
   var tailMaxPx     = 720;
+  var gapPx         = 26;      // ✅ guaranteed space so shuttle never overlaps text
+  var anchorRatio   = 0.45;    // where the “nose area” is measured from left of shuttle
 
-  var bodyYRatio    = 0.60;    // vertical lock to shuttle body
+  var bodyYRatio    = 0.60;    // lock text height to shuttle body
   var yNudgePx      = 0;
+  /* ------------ */
 
-  var gapPx         = 20;      // ✅ prevents shuttle overlapping text (try 16–28)
-  var anchorRatio   = 0.32;    // ✅ anchor behind the shuttle nose (0.25–0.40)
-  // ------------
-
-  var dir = 1;   // 1 = right, -1 = left
+  var dir = 1; // 1 right, -1 left
   var idx = 0;
   var legStart = performance.now();
   var pausedUntil = 0;
@@ -140,7 +133,6 @@
     txt.textContent = sentences[idx];
     tail.style.width = "0px";
   }
-
   setSentence(0);
 
   function frame(now){
@@ -151,7 +143,7 @@
 
     var trackW = track.clientWidth;
 
-    // measure shuttle
+    // Measure shuttle width reliably
     var sr0 = shuttle.getBoundingClientRect();
     var shuttleW = sr0.width || 72;
 
@@ -163,38 +155,42 @@
 
     var e = easeInOut(t);
 
-    // position along leg
+    // Position shuttle
     var travelT = (dir === 1) ? e : (1 - e);
     var x = minX + (maxX - minX) * travelT;
 
     shuttle.style.left = x + "px";
     shuttle.style.transform = (dir === 1) ? "scaleX(1)" : "scaleX(-1)";
 
-    // lock tail Y to shuttle body
+    // Lock tail vertically to shuttle body
     var sr = shuttle.getBoundingClientRect();
     var tr = track.getBoundingClientRect();
     var targetCenterY = (sr.top - tr.top) + (sr.height * bodyYRatio) + yNudgePx;
     var tailH = (tail.getBoundingClientRect().height || 30);
     tail.style.top = Math.max(0, targetCenterY - tailH/2) + "px";
 
-    // grow tail
-    var trailW = Math.max(0, Math.min(tailMaxPx, tailMaxPx * e));
-    tail.style.width = trailW + "px";
-
-    // ✅ anchor + gap stops overlap
+    // Anchor point on shuttle
     var anchor = x + shuttleW * anchorRatio;
 
+    // ✅ Clamp trail width so it never reaches shuttle (no overlap possible)
+    // available space behind shuttle depends on direction
+    var available;
     if (dir === 1){
-      // moving RIGHT: trail is behind (left side), END near shuttle but with a gap
-      tail.style.left = Math.max(0, (anchor - trailW - gapPx)) + "px";
+      // trail sits to the LEFT of shuttle, ending before (anchor - gap)
+      available = Math.max(0, (anchor - gapPx) - minX);
       tail.style.textAlign = "right";
+      tail.style.left = minX + "px";
     } else {
-      // moving LEFT: trail is behind (right side), START after a gap
-      tail.style.left = (anchor + gapPx) + "px";
+      // trail sits to the RIGHT of shuttle, starting after (anchor + gap)
+      available = Math.max(0, maxX - (anchor + gapPx));
       tail.style.textAlign = "left";
+      tail.style.left = (anchor + gapPx) + "px";
     }
 
-    // end of leg
+    var trailW = Math.min(tailMaxPx * e, available);
+    tail.style.width = trailW + "px";
+
+    // End of leg
     if (t >= 1){
       dir *= -1;
       legStart = now;
