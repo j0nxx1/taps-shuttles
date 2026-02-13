@@ -8,6 +8,19 @@
 <style>
 body{margin:0;background:transparent;}
 
+/* ===================================== */
+/* 🚫 HIDE ENTIRE ANIMATION ON MOBILE */
+/* ===================================== */
+@media (max-width: 768px){
+  body{
+    display:none;
+  }
+}
+
+/* ===================================== */
+/* DESKTOP STYLES */
+/* ===================================== */
+
 .track{
   position:relative;
   width:100%;
@@ -15,7 +28,6 @@ body{margin:0;background:transparent;}
   overflow:hidden;
 }
 
-/* 🚐 Shuttle */
 .shuttle{
   position:absolute;
   bottom:20px;
@@ -24,7 +36,6 @@ body{margin:0;background:transparent;}
   will-change:left, transform;
 }
 
-/* Text trail */
 .trail{
   position:absolute;
   bottom:8px;
@@ -42,7 +53,6 @@ body{margin:0;background:transparent;}
   color:black;
 }
 
-/* House & Plane */
 .home{
   position:absolute;
   left:0;
@@ -55,37 +65,6 @@ body{margin:0;background:transparent;}
   right:0;
   bottom:20px;
   font-size:26px;
-}
-
-/* ========================= */
-/* 📱 MOBILE ADJUSTMENTS */
-/* ========================= */
-
-@media (max-width: 768px){
-
-  .track{
-    height:85px;
-  }
-
-  .shuttle{
-    font-size:24px;
-    bottom:12px;
-  }
-
-  .trail{
-    bottom:2px;
-    height:24px;
-  }
-
-  .trail span{
-    font-size:11px;   /* MUCH smaller text for mobile */
-    letter-spacing:0.3px;
-  }
-
-  .home, .air{
-    font-size:16px;
-    bottom:12px;
-  }
 }
 </style>
 </head>
