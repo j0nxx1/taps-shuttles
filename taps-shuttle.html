@@ -15,6 +15,7 @@ body{margin:0;background:transparent;}
   overflow:hidden;
 }
 
+/* 🚐 */
 .shuttle{
   position:absolute;
   bottom:20px;
@@ -23,9 +24,10 @@ body{margin:0;background:transparent;}
   will-change:left, transform;
 }
 
+/* Trail text */
 .trail{
   position:absolute;
-  bottom:8px;   /* text lowered */
+  bottom:8px;
   height:40px;
   overflow:hidden;
   pointer-events:none;
@@ -40,7 +42,7 @@ body{margin:0;background:transparent;}
   color:black;
 }
 
-/* House & Plane moved up */
+/* House + Plane */
 .home{
   position:absolute;
   left:0;
@@ -53,6 +55,37 @@ body{margin:0;background:transparent;}
   right:0;
   bottom:20px;
   font-size:26px;
+}
+
+/* ========================= */
+/* 📱 MOBILE ADJUSTMENTS */
+/* ========================= */
+
+@media (max-width: 768px){
+
+  .track{
+    height:95px;
+  }
+
+  .shuttle{
+    font-size:28px;
+    bottom:14px;
+  }
+
+  .trail{
+    bottom:4px;
+    height:30px;
+  }
+
+  .trail span{
+    font-size:14px;   /* smaller text on mobile */
+    letter-spacing:0.5px;
+  }
+
+  .home, .air{
+    font-size:18px;
+    bottom:14px;
+  }
 }
 </style>
 </head>
