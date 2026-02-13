@@ -35,21 +35,23 @@
     width:72px;
     height:auto;
     z-index:3;
-    will-change:left,transform;
+    will-change:left;
   }
 
-  /* Trail container (we position it each frame) */
-  .taps-trail{
+  /* left-facing version is a mirrored SVG (not a CSS transform) */
+  .hidden{ display:none; }
+
+  .taps-tail{
     position:absolute;
     height:30px;
     overflow:hidden;
-    pointer-events:none;
     z-index:2;
+    pointer-events:none;
     box-sizing:border-box;
     padding:0 6px;
   }
 
-  .taps-trail .txt{
+  .taps-tail .txt{
     display:block;
     white-space:nowrap;
     font-family:'Inter',sans-serif;
@@ -70,14 +72,14 @@
 </head>
 <body>
 
-<div class="taps-track" id="tapsTrack">
-  <div class="taps-trail" id="tapsTrail"><span class="txt" id="tapsTxt"></span></div>
+<div class="taps-track" id="track">
+  <div class="taps-tail" id="tail"><span class="txt" id="txt"></span></div>
 
   <div class="taps-end home" aria-hidden="true">🏠</div>
   <div class="taps-end air" aria-hidden="true">✈️</div>
 
-  <!-- Shuttle SVG -->
-  <svg class="taps-shuttle" id="tapsShuttle" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-label="Shuttle">
+  <!-- RIGHT-FACING SHUTTLE -->
+  <svg class="taps-shuttle" id="shuttleR" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-label="Shuttle">
     <rect x="20" y="35" width="150" height="45" rx="12" fill="#111"/>
     <rect x="155" y="45" width="35" height="35" rx="10" fill="#111"/>
     <rect x="35" y="43" width="40" height="20" rx="5" fill="#BFE9FF"/>
@@ -88,15 +90,30 @@
     <circle cx="140" cy="88" r="13" fill="#000"/><circle cx="140" cy="88" r="6" fill="#666"/>
     <circle cx="188" cy="63" r="5" fill="#FFD54A"/>
   </svg>
+
+  <!-- LEFT-FACING SHUTTLE (mirrored by SVG coordinate transform, not CSS scaleX) -->
+  <svg class="taps-shuttle hidden" id="shuttleL" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-label="Shuttle">
+    <g transform="translate(220,0) scale(-1,1)">
+      <rect x="20" y="35" width="150" height="45" rx="12" fill="#111"/>
+      <rect x="155" y="45" width="35" height="35" rx="10" fill="#111"/>
+      <rect x="35" y="43" width="40" height="20" rx="5" fill="#BFE9FF"/>
+      <rect x="80" y="43" width="40" height="20" rx="5" fill="#BFE9FF"/>
+      <rect x="125" y="43" width="22" height="20" rx="5" fill="#BFE9FF"/>
+      <rect x="30" y="67" width="135" height="6" rx="3" fill="#ffffff" opacity="0.85"/>
+      <circle cx="60" cy="88" r="13" fill="#000"/><circle cx="60" cy="88" r="6" fill="#666"/>
+      <circle cx="140" cy="88" r="13" fill="#000"/><circle cx="140" cy="88" r="6" fill="#666"/>
+      <circle cx="188" cy="63" r="5" fill="#FFD54A"/>
+    </g>
+  </svg>
 </div>
 
 <script>
 (function(){
-
-  var track   = document.getElementById('tapsTrack');
-  var shuttle = document.getElementById('tapsShuttle');
-  var trail   = document.getElementById('tapsTrail');
-  var txt     = document.getElementById('tapsTxt');
+  var track = document.getElementById('track');
+  var tail  = document.getElementById('tail');
+  var txt   = document.getElementById('txt');
+  var R     = document.getElementById('shuttleR');
+  var L     = document.getElementById('shuttleL');
 
   var lines = [
     "WELCOME TO TAPS SHUTTLES",
@@ -109,104 +126,86 @@
   ];
 
   /* ===== TUNE ===== */
-  var legMs       = 12000;  // bigger = slower
-  var pauseMs     = 350;
-  var padLeft     = 42;
-  var padRight    = 42;
+  var legMs     = 12000;  // bigger = slower
+  var pauseMs   = 350;
+  var padL      = 42;
+  var padR      = 42;
 
-  var trailMax    = 720;    // maximum trail length
-  var bodyYRatio  = 0.60;   // vertical lock point on shuttle
-  var yNudge      = 0;
-
-  var anchorRatio = 0.45;   // anchor point on shuttle (0.40–0.50 best)
-
-  // ✅ direction-specific gaps (fixes “too far one way / too close the other”)
-  var gapWhenRight = 14;    // shuttle moving → (trail behind on left)
-  var gapWhenLeft  = 20;    // shuttle moving ← (trail behind on right)
+  var tailMax   = 720;
+  var gap       = 14;     // consistent gap both directions
+  var bodyYFrac = 0.60;   // lock to shuttle body
+  var yNudge    = 0;
   /* ============== */
 
-  var dir = 1;      // 1 = right, -1 = left
+  var dir = 1; // 1 right, -1 left
   var idx = 0;
   var start = performance.now();
   var waitUntil = 0;
 
   txt.textContent = lines[0];
 
-  function easeInOut(t){
-    return 0.5 - 0.5 * Math.cos(Math.PI * t);
-  }
+  function ease(t){ return 0.5 - 0.5 * Math.cos(Math.PI * t); }
 
   function setLine(i){
     idx = (i + lines.length) % lines.length;
     txt.textContent = lines[idx];
-    trail.style.width = "0px";
+    tail.style.width = "0px";
   }
 
-  function loop(now){
+  function frame(now){
+    if(now < waitUntil){ requestAnimationFrame(frame); return; }
 
-    if(now < waitUntil){
-      requestAnimationFrame(loop);
-      return;
-    }
+    // choose active shuttle (NO CSS flipping)
+    var active = (dir === 1) ? R : L;
+    var other  = (dir === 1) ? L : R;
+    if(other.className.indexOf("hidden") === -1) other.className += " hidden";
+    active.className = active.className.replace("hidden","").trim();
 
     var trackW = track.clientWidth;
+    var sW = active.getBoundingClientRect().width || 72;
 
-    // shuttle width
-    var sr0 = shuttle.getBoundingClientRect();
-    var shuttleW = sr0.width || 72;
-
-    var minX = padLeft;
-    var maxX = Math.max(minX, trackW - shuttleW - padRight);
+    var minX = padL;
+    var maxX = Math.max(minX, trackW - sW - padR);
 
     var t = (now - start) / legMs;
     if(t > 1) t = 1;
 
-    var e = easeInOut(t);
-
-    // compute shuttle X
+    var e = ease(t);
     var travelT = (dir === 1) ? e : (1 - e);
     var x = minX + (maxX - minX) * travelT;
 
-    shuttle.style.left = x + "px";
-    shuttle.style.transform = (dir === 1) ? "scaleX(1)" : "scaleX(-1)";
+    // position BOTH so swapping is seamless
+    R.style.left = x + "px";
+    L.style.left = x + "px";
 
-    // lock trail Y to shuttle body
-    var sr = shuttle.getBoundingClientRect();
+    // measure after positioning (stable!)
+    var sr = active.getBoundingClientRect();
     var tr = track.getBoundingClientRect();
-    var centerY = (sr.top - tr.top) + (sr.height * bodyYRatio) + yNudge;
-    var trailH = (trail.getBoundingClientRect().height || 30);
-    trail.style.top = Math.max(0, centerY - trailH/2) + "px";
 
-    // anchor point on shuttle
-    var anchor = x + shuttleW * anchorRatio;
+    // vertical lock
+    var centerY = (sr.top - tr.top) + (sr.height * bodyYFrac) + yNudge;
+    var tailH = tail.getBoundingClientRect().height || 30;
+    tail.style.top = Math.max(0, centerY - tailH/2) + "px";
 
-    // desired trail length
-    var desired = trailMax * e;
-
-    // compute available space behind shuttle, clamp so overlap is impossible
-    var available, gap;
+    // tail length
+    var desiredW = tailMax * e;
 
     if(dir === 1){
-      gap = gapWhenRight;
-
-      // trail ends at (anchor - gap), starts at minX
-      available = Math.max(0, (anchor - gap) - minX);
-      trail.style.textAlign = "right";
-      trail.style.left = minX + "px";
+      // moving RIGHT: tail sits LEFT of the shuttle (ends at shuttle left - gap)
+      var endX = (sr.left - tr.left) - gap;
+      var w = Math.min(desiredW, Math.max(0, endX));
+      tail.style.width = w + "px";
+      tail.style.left = (endX - w) + "px";
+      tail.style.textAlign = "right";
     } else {
-      gap = gapWhenLeft;
-
-      // trail starts at (anchor + gap), ends at (maxX + shuttleW?) — use maxX+shuttleW edge
-      var rightEdge = maxX + shuttleW; // farthest visible point for trail
-      available = Math.max(0, rightEdge - (anchor + gap));
-      trail.style.textAlign = "left";
-      trail.style.left = (anchor + gap) + "px";
+      // moving LEFT: tail sits RIGHT of the shuttle (starts at shuttle right + gap)
+      var startX = (sr.right - tr.left) + gap;
+      var w2 = Math.min(desiredW, Math.max(0, trackW - startX));
+      tail.style.width = w2 + "px";
+      tail.style.left = startX + "px";
+      tail.style.textAlign = "left";
     }
 
-    var w = Math.min(desired, available);
-    trail.style.width = w + "px";
-
-    // end of leg
     if(t >= 1){
       dir *= -1;
       start = now;
@@ -214,11 +213,10 @@
       setLine(idx + 1);
     }
 
-    requestAnimationFrame(loop);
+    requestAnimationFrame(frame);
   }
 
-  requestAnimationFrame(loop);
-
+  requestAnimationFrame(frame);
 })();
 </script>
 
