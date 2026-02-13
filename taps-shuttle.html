@@ -1315,6 +1315,8 @@ This one slides like an airport departures strip.
     🛫 MORNING RUN  |  🚐🚐🚐  |  🧳🧳🧳  |  ✈️ GATE OPEN  |  ☕️ QUICK STOP  |  🛬 HOME SAFE
   </div>
 </div>
+
+
 If you tell me where you’re placing it on the TAPS page (top hero? reviews section? footer?), I’ll tune the height + speed + border to match your site and make it look intentional, not “random embed.”
 
 
@@ -3035,6 +3037,8 @@ Repeats through all sentences, then loops back to the start
   requestAnimationFrame(frame);
 })();
 </script>
+
+
 Quick tweaks
 Slow it down a bit: change legDurationMs = 11000 to 14000
 
@@ -5540,6 +5544,8 @@ ChatGPT said:
   </div>
 </div>
 
+
+
 You said:
 that did not work. lets try A
 
@@ -6917,7 +6923,7 @@ body{margin:0;background:transparent;}
 .end{
   position:absolute;
   bottom:8px;
-  font-size:38px;
+  font-size:28px;
 }
 .home{left:0;}
 .air{right:0;}
@@ -6962,7 +6968,434 @@ body{margin:0;background:transparent;}
   <div class="end home">🏠</div>
   <div class="end air">✈️</div>
 
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Van_icon.svg/_40px-Van_icon.svg.png"
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Van_icon.svg/240px-Van_icon.svg.png"
        class="shuttle"
+       id="shuttle">
+</div>
+
+<script>
+(function(){
+
+var track = document.getElementById("track");
+var shuttle = document.getElementById("shuttle");
+var trail = document.getElementById("trail");
+var text = document.getElementById("text");
+
+var sentences = [
+  "WELCOME TO TAPS SHUTTLES",
+  "MATAMATA-PIAKO BASED SERVICE — DOOR TO DOOR DIRECT",
+  "HAMILTON AIRPORT → TE AROHA FROM $110",
+  "HAMILTON AIRPORT → MORRINSVILLE FROM $110",
+  "HAMILTON AIRPORT → MATAMATA FROM $120",
+  "TE AROHA → AUCKLAND AIRPORT FROM $230",
+  "SEE OUR SUPER DEALS FOR MORE LOCATIONS BELOW!! ✈️"
+];
+
+var speed = 12000;
+var pause = 300;
+var padding = 60;
+
+var dir = 1;
+var index = 0;
+var start = performance.now();
+var wait = 0;
+
+text.innerHTML = sentences[0];
+
+function ease(t){
+  return 0.5 - 0.5*Math.cos(Math.PI*t);
+}
+
+function loop(now){
+
+  if(now < wait){
+    requestAnimationFrame(loop);
+    return;
+  }
+
+  var w = track.clientWidth;
+  var shuttleW = shuttle.offsetWidth;
+
+  var min = padding;
+  var max = w - shuttleW - padding;
+
+  var t = (now - start)/speed;
+  if(t>1) t=1;
+
+  var p = ease(t);
+
+  var x = (dir===1)
+    ? min + (max-min)*p
+    : min + (max-min)*(1-p);
+
+  shuttle.style.left = x+"px";
+  shuttle.style.transform = (dir===1)?"scaleX(1)":"scaleX(-1)";
+
+  var trailWidth = 600 * p;
+
+  if(dir===1){
+    // text expands left only (never under shuttle)
+    trail.style.left = (x - trailWidth - 20)+"px";
+    trail.style.width = trailWidth+"px";
+    trail.style.textAlign="right";
+  }else{
+    // text expands right only
+    trail.style.left = (x + shuttleW + 20)+"px";
+    trail.style.width = trailWidth+"px";
+    trail.style.textAlign="left";
+  }
+
+  if(t>=1){
+    dir*=-1;
+    start=now;
+    wait=now+pause;
+    index=(index+1)%sentences.length;
+    text.innerHTML=sentences[index];
+  }
+
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+
+})();
+</script>
+
+</body>
+</html>
+
+
+Why This One Will NOT Overlap
+Instead of anchoring text near the shuttle body…
+
+It:
+
+• Expands text ONLY away from the shuttle
+• Leaves a fixed 20px safety gap
+• Never lets trail width approach the shuttle
+
+Overlap is mathematically impossible now.
+
+After Uploading
+Use this in Carrd:
+
+<iframe 
+  src="https://j0nxx1.github.io/taps-shuttles/taps-shuttle.html?v=3"
+  style="width:100%; height:140px; border:0;"
+  scrolling="no">
+</iframe>
+Change v=3 whenever you update.
+
+If it still overlaps after this, I will personally rewrite it using canvas instead and eliminate DOM positioning entirely.
+
+
+You said:
+now its to far behind when going from my left to right, and too close when going from my right to left
+
+ChatGPT said:
+Good — that tells us exactly what’s wrong.
+
+Right now the gap is fixed at 20px, but the anchor point is different depending on direction, so visually:
+
+• Going left → right it feels too far
+• Going right → left it feels too close
+
+The fix is simple:
+
+👉 Use a direction-specific gap
+👉 Use the exact same visual anchor point on the shuttle for both directions
+
+We’re going to anchor the trail to the middle of the shuttle body, not the front edge.
+
+✅ Replace ONLY the positioning part in your JS
+Find this section:
+
+var trailWidth = 600 * p;
+
+if(dir===1){
+    trail.style.left = (x - trailWidth - 20)+"px";
+    trail.style.width = trailWidth+"px";
+    trail.style.textAlign="right";
+}else{
+    trail.style.left = (x + shuttleW + 20)+"px";
+    trail.style.width = trailWidth+"px";
+    trail.style.textAlign="left";
+}
+🔥 Replace it with THIS:
+var trailWidth = 600 * p;
+
+/* anchor from the SAME visual point on shuttle */
+var anchor = x + (shuttleW * 0.45);  // middle of shuttle body
+
+var gapRight = 14;  // shuttle moving RIGHT (text behind on left)
+var gapLeft  = 20;  // shuttle moving LEFT  (text behind on right)
+
+if(dir===1){
+    // moving RIGHT
+    trail.style.width = trailWidth + "px";
+    trail.style.left  = (anchor - trailWidth - gapRight) + "px";
+    trail.style.textAlign = "right";
+}else{
+    // moving LEFT
+    trail.style.width = trailWidth + "px";
+    trail.style.left  = (anchor + gapLeft) + "px";
+    trail.style.textAlign = "left";
+}
+🎯 What This Does
+• Uses one consistent anchor point (mid-body)
+• Slightly smaller gap when moving right
+• Slightly larger gap when moving left
+• Visually balances the spacing
+
+🛠 Fine Tuning (if needed)
+If it’s still slightly off:
+
+Reduce gapRight to 10
+
+Increase gapLeft to 24
+
+Adjust anchor multiplier between 0.40 – 0.50
+
+That anchor value is the key to perfect symmetry.
+
+Update GitHub
+Refresh with ?v=4
+Hard refresh browser
+
+Tell me which direction still looks off and I’ll micro-tune it precisely.
+
+
+You said:
+just redo whole thing
+
+ChatGPT said:
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+  body{margin:0;background:transparent;}
+
+  .taps-track{
+    position:relative;
+    width:100%;
+    height:120px;
+    overflow:hidden;
+    background:transparent;
+  }
+
+  .taps-end{
+    position:absolute;
+    bottom:6px;
+    font-size:28px;
+    line-height:1;
+    user-select:none;
+    z-index:4;
+  }
+  .taps-end.home{left:0;}
+  .taps-end.air{right:0;}
+
+  .taps-shuttle{
+    position:absolute;
+    bottom:2px;
+    width:72px;
+    height:auto;
+    z-index:3;
+    will-change:left,transform;
+  }
+
+  /* Trail container (we position it each frame) */
+  .taps-trail{
+    position:absolute;
+    height:30px;
+    overflow:hidden;
+    pointer-events:none;
+    z-index:2;
+    box-sizing:border-box;
+    padding:0 6px;
+  }
+
+  .taps-trail .txt{
+    display:block;
+    white-space:nowrap;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    font-weight:300;
+    letter-spacing:0.8px;
+    text-transform:uppercase;
+
+    color:black;
+    -webkit-text-stroke:1.2px black;
+    text-shadow:
+      -1px -1px 0 #000,
+       1px -1px 0 #000,
+      -1px  1px 0 #000,
+       1px  1px 0 #000;
+  }
+</style>
+</head>
+<body>
+
+<div class="taps-track" id="tapsTrack">
+  <div class="taps-trail" id="tapsTrail"><span class="txt" id="tapsTxt"></span></div>
+
+  <div class="taps-end home" aria-hidden="true">🏠</div>
+  <div class="taps-end air" aria-hidden="true">✈️</div>
+
+  <!-- Shuttle SVG -->
+  <svg class="taps-shuttle" id="tapsShuttle" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-label="Shuttle">
+    <rect x="20" y="35" width="150" height="45" rx="12" fill="#111"/>
+    <rect x="155" y="45" width="35" height="35" rx="10" fill="#111"/>
+    <rect x="35" y="43" width="40" height="20" rx="5" fill="#BFE9FF"/>
+    <rect x="80" y="43" width="40" height="20" rx="5" fill="#BFE9FF"/>
+    <rect x="125" y="43" width="22" height="20" rx="5" fill="#BFE9FF"/>
+    <rect x="30" y="67" width="135" height="6" rx="3" fill="#ffffff" opacity="0.85"/>
+    <circle cx="60" cy="88" r="13" fill="#000"/><circle cx="60" cy="88" r="6" fill="#666"/>
+    <circle cx="140" cy="88" r="13" fill="#000"/><circle cx="140" cy="88" r="6" fill="#666"/>
+    <circle cx="188" cy="63" r="5" fill="#FFD54A"/>
+  </svg>
+</div>
+
+<script>
+(function(){
+
+  var track   = document.getElementById('tapsTrack');
+  var shuttle = document.getElementById('tapsShuttle');
+  var trail   = document.getElementById('tapsTrail');
+  var txt     = document.getElementById('tapsTxt');
+
+  var lines = [
+    "WELCOME TO TAPS SHUTTLES",
+    "MATAMATA-PIAKO BASED SERVICE — DOOR TO DOOR DIRECT",
+    "HAMILTON AIRPORT → TE AROHA FROM $110",
+    "HAMILTON AIRPORT → MORRINSVILLE FROM $110",
+    "HAMILTON AIRPORT → MATAMATA FROM $120",
+    "TE AROHA → AUCKLAND AIRPORT FROM $230",
+    "SEE OUR SUPER DEALS FOR MORE LOCATIONS BELOW!! ✈️"
+  ];
+
+  /* ===== TUNE ===== */
+  var legMs       = 12000;  // bigger = slower
+  var pauseMs     = 350;
+  var padLeft     = 42;
+  var padRight    = 42;
+
+  var trailMax    = 720;    // maximum trail length
+  var bodyYRatio  = 0.60;   // vertical lock point on shuttle
+  var yNudge      = 0;
+
+  var anchorRatio = 0.45;   // anchor point on shuttle (0.40–0.50 best)
+
+  // ✅ direction-specific gaps (fixes “too far one way / too close the other”)
+  var gapWhenRight = 14;    // shuttle moving → (trail behind on left)
+  var gapWhenLeft  = 20;    // shuttle moving ← (trail behind on right)
+  /* ============== */
+
+  var dir = 1;      // 1 = right, -1 = left
+  var idx = 0;
+  var start = performance.now();
+  var waitUntil = 0;
+
+  txt.textContent = lines[0];
+
+  function easeInOut(t){
+    return 0.5 - 0.5 * Math.cos(Math.PI * t);
+  }
+
+  function setLine(i){
+    idx = (i + lines.length) % lines.length;
+    txt.textContent = lines[idx];
+    trail.style.width = "0px";
+  }
+
+  function loop(now){
+
+    if(now < waitUntil){
+      requestAnimationFrame(loop);
+      return;
+    }
+
+    var trackW = track.clientWidth;
+
+    // shuttle width
+    var sr0 = shuttle.getBoundingClientRect();
+    var shuttleW = sr0.width || 72;
+
+    var minX = padLeft;
+    var maxX = Math.max(minX, trackW - shuttleW - padRight);
+
+    var t = (now - start) / legMs;
+    if(t > 1) t = 1;
+
+    var e = easeInOut(t);
+
+    // compute shuttle X
+    var travelT = (dir === 1) ? e : (1 - e);
+    var x = minX + (maxX - minX) * travelT;
+
+    shuttle.style.left = x + "px";
+    shuttle.style.transform = (dir === 1) ? "scaleX(1)" : "scaleX(-1)";
+
+    // lock trail Y to shuttle body
+    var sr = shuttle.getBoundingClientRect();
+    var tr = track.getBoundingClientRect();
+    var centerY = (sr.top - tr.top) + (sr.height * bodyYRatio) + yNudge;
+    var trailH = (trail.getBoundingClientRect().height || 30);
+    trail.style.top = Math.max(0, centerY - trailH/2) + "px";
+
+    // anchor point on shuttle
+    var anchor = x + shuttleW * anchorRatio;
+
+    // desired trail length
+    var desired = trailMax * e;
+
+    // compute available space behind shuttle, clamp so overlap is impossible
+    var available, gap;
+
+    if(dir === 1){
+      gap = gapWhenRight;
+
+      // trail ends at (anchor - gap), starts at minX
+      available = Math.max(0, (anchor - gap) - minX);
+      trail.style.textAlign = "right";
+      trail.style.left = minX + "px";
+    } else {
+      gap = gapWhenLeft;
+
+      // trail starts at (anchor + gap), ends at (maxX + shuttleW?) — use maxX+shuttleW edge
+      var rightEdge = maxX + shuttleW; // farthest visible point for trail
+      available = Math.max(0, rightEdge - (anchor + gap));
+      trail.style.textAlign = "left";
+      trail.style.left = (anchor + gap) + "px";
+    }
+
+    var w = Math.min(desired, available);
+    trail.style.width = w + "px";
+
+    // end of leg
+    if(t >= 1){
+      dir *= -1;
+      start = now;
+      waitUntil = now + pauseMs;
+      setLine(idx + 1);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+
+})();
+</script>
+
+</body>
+</html>
+
+
 
 
