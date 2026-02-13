@@ -6,8 +6,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
 <style>
   body{margin:0;background:transparent;}
+
   .taps-track{
     position:relative;
     width:100%;
@@ -15,6 +17,7 @@
     overflow:hidden;
     background:transparent;
   }
+
   .taps-end{
     position:absolute;
     bottom:6px;
@@ -35,13 +38,17 @@
     will-change:left,transform;
   }
 
+  /* Trail container */
   .taps-tail{
     position:absolute;
     height:30px;
     overflow:hidden;
     z-index:2;
     pointer-events:none;
+    box-sizing:border-box;
+    padding:0 6px; /* small safety padding */
   }
+
   .taps-tail .txt{
     display:block;
     white-space:nowrap;
@@ -59,23 +66,29 @@
       -1px  1px 0 #000,
        1px  1px 0 #000;
   }
+
+  @media (prefers-reduced-motion: reduce){
+    .taps-shuttle{position:static;transform:none !important;}
+    .taps-tail{position:static;width:auto !important;height:auto;overflow:visible;}
+  }
 </style>
 </head>
 <body>
 
 <div class="taps-track" id="tapsTrack">
   <div class="taps-tail" id="tapsTail"><span class="txt" id="tapsTxt"></span></div>
+
   <div class="taps-end home" aria-hidden="true">🏠</div>
   <div class="taps-end air" aria-hidden="true">✈️</div>
 
-  <!-- Shuttle SVG (consistent direction on all devices) -->
+  <!-- Shuttle SVG (consistent direction when flipped) -->
   <svg class="taps-shuttle" id="tapsShuttle" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-label="Shuttle">
     <rect x="20" y="35" width="150" height="45" rx="12" fill="#111"/>
     <rect x="155" y="45" width="35" height="35" rx="10" fill="#111"/>
     <rect x="35" y="43" width="40" height="20" rx="5" fill="#BFE9FF"/>
     <rect x="80" y="43" width="40" height="20" rx="5" fill="#BFE9FF"/>
     <rect x="125" y="43" width="22" height="20" rx="5" fill="#BFE9FF"/>
-    <rect x="30" y="67" width="135" height="6" rx="3" fill="#fff" opacity=".85"/>
+    <rect x="30" y="67" width="135" height="6" rx="3" fill="#ffffff" opacity="0.85"/>
     <circle cx="60" cy="88" r="13" fill="#000"/><circle cx="60" cy="88" r="6" fill="#666"/>
     <circle cx="140" cy="88" r="13" fill="#000"/><circle cx="140" cy="88" r="6" fill="#666"/>
     <circle cx="188" cy="63" r="5" fill="#FFD54A"/>
@@ -83,13 +96,13 @@
 </div>
 
 <script>
-(() => {
-  const track   = document.getElementById('tapsTrack');
-  const shuttle = document.getElementById('tapsShuttle');
-  const tail    = document.getElementById('tapsTail');
-  const txt     = document.getElementById('tapsTxt');
+(function(){
+  var track   = document.getElementById('tapsTrack');
+  var shuttle = document.getElementById('tapsShuttle');
+  var tail    = document.getElementById('tapsTail');
+  var txt     = document.getElementById('tapsTxt');
 
-  const sentences = [
+  var sentences = [
     "WELCOME TO TAPS SHUTTLES",
     "MATAMATA-PIAKO BASED SERVICE — DOOR TO DOOR DIRECT",
     "HAMILTON AIRPORT → TE AROHA FROM $110",
@@ -99,70 +112,90 @@
     "SEE OUR SUPER DEALS FOR MORE LOCATIONS BELOW!! ✈️"
   ];
 
-  const legDurationMs = 12000; // bigger = slower
-  const edgePauseMs   = 350;
-  const leftPadPx     = 42;
-  const rightPadPx    = 42;
-  const tailMaxPx     = 720;
+  // --- TUNE ---
+  var legDurationMs = 12000;   // bigger = slower
+  var edgePauseMs   = 350;     // pause at each end
+  var leftPadPx     = 42;
+  var rightPadPx    = 42;
+  var tailMaxPx     = 720;
 
-  // Locks text vertically to the shuttle body:
-  const bodyYRatio    = 0.60;  // lower = up, higher = down
-  const yNudgePx      = 0;     // extra pixels down/up
+  var bodyYRatio    = 0.60;    // vertical lock to shuttle body
+  var yNudgePx      = 0;
 
-  let dir = 1, idx = 0;
-  let legStart = performance.now();
-  let pausedUntil = 0;
+  var gapPx         = 20;      // ✅ prevents shuttle overlapping text (try 16–28)
+  var anchorRatio   = 0.32;    // ✅ anchor behind the shuttle nose (0.25–0.40)
+  // ------------
 
-  const easeInOut = t => 0.5 - 0.5 * Math.cos(Math.PI * t);
+  var dir = 1;   // 1 = right, -1 = left
+  var idx = 0;
+  var legStart = performance.now();
+  var pausedUntil = 0;
 
-  const setSentence = i => {
+  function easeInOut(t){
+    return 0.5 - 0.5 * Math.cos(Math.PI * t);
+  }
+
+  function setSentence(i){
     idx = (i + sentences.length) % sentences.length;
     txt.textContent = sentences[idx];
     tail.style.width = "0px";
-  };
+  }
+
   setSentence(0);
 
   function frame(now){
-    if(now < pausedUntil){ requestAnimationFrame(frame); return; }
+    if (now < pausedUntil){
+      requestAnimationFrame(frame);
+      return;
+    }
 
-    const trackW = track.clientWidth;
-    const sr0 = shuttle.getBoundingClientRect();
-    const shuttleW = sr0.width || 72;
+    var trackW = track.clientWidth;
 
-    const minX = leftPadPx;
-    const maxX = Math.max(minX, trackW - shuttleW - rightPadPx);
+    // measure shuttle
+    var sr0 = shuttle.getBoundingClientRect();
+    var shuttleW = sr0.width || 72;
 
-    let t = (now - legStart) / legDurationMs;
-    if(t > 1) t = 1;
-    const e = easeInOut(t);
+    var minX = leftPadPx;
+    var maxX = Math.max(minX, trackW - shuttleW - rightPadPx);
 
-    const travelT = (dir === 1) ? e : (1 - e);
-    const x = minX + (maxX - minX) * travelT;
+    var t = (now - legStart) / legDurationMs;
+    if (t > 1) t = 1;
+
+    var e = easeInOut(t);
+
+    // position along leg
+    var travelT = (dir === 1) ? e : (1 - e);
+    var x = minX + (maxX - minX) * travelT;
 
     shuttle.style.left = x + "px";
     shuttle.style.transform = (dir === 1) ? "scaleX(1)" : "scaleX(-1)";
 
-    // Measure after positioning
-    const sr = shuttle.getBoundingClientRect();
-    const tr = track.getBoundingClientRect();
-
-    const targetCenterY = (sr.top - tr.top) + (sr.height * bodyYRatio) + yNudgePx;
-    const tailH = (tail.getBoundingClientRect().height || 30);
+    // lock tail Y to shuttle body
+    var sr = shuttle.getBoundingClientRect();
+    var tr = track.getBoundingClientRect();
+    var targetCenterY = (sr.top - tr.top) + (sr.height * bodyYRatio) + yNudgePx;
+    var tailH = (tail.getBoundingClientRect().height || 30);
     tail.style.top = Math.max(0, targetCenterY - tailH/2) + "px";
 
-    const trailW = Math.max(0, Math.min(tailMaxPx, tailMaxPx * e));
-    const anchor = x + shuttleW * 0.45;
-
+    // grow tail
+    var trailW = Math.max(0, Math.min(tailMaxPx, tailMaxPx * e));
     tail.style.width = trailW + "px";
-    if(dir === 1){
-      tail.style.left = Math.max(0, anchor - trailW) + "px";
+
+    // ✅ anchor + gap stops overlap
+    var anchor = x + shuttleW * anchorRatio;
+
+    if (dir === 1){
+      // moving RIGHT: trail is behind (left side), END near shuttle but with a gap
+      tail.style.left = Math.max(0, (anchor - trailW - gapPx)) + "px";
       tail.style.textAlign = "right";
     } else {
-      tail.style.left = anchor + "px";
+      // moving LEFT: trail is behind (right side), START after a gap
+      tail.style.left = (anchor + gapPx) + "px";
       tail.style.textAlign = "left";
     }
 
-    if(t >= 1){
+    // end of leg
+    if (t >= 1){
       dir *= -1;
       legStart = now;
       pausedUntil = now + edgePauseMs;
@@ -175,5 +208,6 @@
   requestAnimationFrame(frame);
 })();
 </script>
+
 </body>
 </html>
