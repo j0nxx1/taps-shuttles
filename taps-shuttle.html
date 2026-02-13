@@ -1,88 +1,226 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TAPS Shuttle Schedule</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f4f4f4;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    table {
-      width: 100%;
-      max-width: 600px;
-      margin: 20px auto;
-      border-collapse: collapse;
-      background-color: white;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    th, td {
-      padding: 12px;
-      text-align: center;
-      border: 1px solid #ddd;
-    }
-    th {
-      background-color: #4CAF50;
-      color: white;
-    }
-    tr:hover {
-      background-color: #f5f5f5;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+  body{margin:0;background:transparent;}
+
+  .taps-track{
+    position:relative;
+    width:100%;
+    height:120px;
+    overflow:hidden;
+    background:transparent;
+  }
+
+  .taps-end{
+    position:absolute;
+    bottom:6px;
+    font-size:28px;
+    line-height:1;
+    user-select:none;
+    z-index:4;
+  }
+  .taps-end.home{left:0;}
+  .taps-end.air{right:0;}
+
+  .taps-shuttle{
+    position:absolute;
+    bottom:2px;
+    width:72px;
+    height:auto;
+    z-index:3;
+    will-change:left,transform;
+  }
+
+  /* Trail container (we position it each frame) */
+  .taps-trail{
+    position:absolute;
+    height:30px;
+    overflow:hidden;
+    pointer-events:none;
+    z-index:2;
+    box-sizing:border-box;
+    padding:0 6px;
+  }
+
+  .taps-trail .txt{
+    display:block;
+    white-space:nowrap;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    font-weight:300;
+    letter-spacing:0.8px;
+    text-transform:uppercase;
+
+    color:black;
+    -webkit-text-stroke:1.2px black;
+    text-shadow:
+      -1px -1px 0 #000,
+       1px -1px 0 #000,
+      -1px  1px 0 #000,
+       1px  1px 0 #000;
+  }
+</style>
 </head>
 <body>
-  <h1>TAPS Shuttle Schedule</h1>
-  <div style="text-align: center; font-size: 24px; margin-bottom: 10px;">
-    🏠 Home
-    ✈️ Airport
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th>Home → Airport</th>
-        <th>Airport → Home</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>8:00 AM</td>
-        <td>9:30 AM</td>
-      </tr>
-      <tr>
-        <td>10:00 AM</td>
-        <td>11:30 AM</td>
-      </tr>
-      <tr>
-        <td>12:00 PM</td>
-        <td>1:30 PM</td>
-      </tr>
-      <tr>
-        <td>2:00 PM</td>
-        <td>3:30 PM</td>
-      </tr>
-      <tr>
-        <td>4:00 PM</td>
-        <td>5:30 PM</td>
-      </tr>
-      <tr>
-        <td>6:00 PM</td>
-        <td>7:30 PM</td>
-      </tr>
-      <tr>
-        <td>8:00 PM</td>
-        <td>9:30 PM</td>
-      </tr>
-      <tr>
-        <td>10:00 PM</td>
-        <td>11:30 PM</td>
-      </tr>
-    </tbody>
-  </table>
+
+<div class="taps-track" id="tapsTrack">
+  <div class="taps-trail" id="tapsTrail"><span class="txt" id="tapsTxt"></span></div>
+
+  <div class="taps-end home" aria-hidden="true">🏠</div>
+  <div class="taps-end air" aria-hidden="true">✈️</div>
+
+  <!-- Shuttle SVG -->
+  <svg class="taps-shuttle" id="tapsShuttle" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-label="Shuttle">
+    <rect x="20" y="35" width="150" height="45" rx="12" fill="#111"/>
+    <rect x="155" y="45" width="35" height="35" rx="10" fill="#111"/>
+    <rect x="35" y="43" width="40" height="20" rx="5" fill="#BFE9FF"/>
+    <rect x="80" y="43" width="40" height="20" rx="5" fill="#BFE9FF"/>
+    <rect x="125" y="43" width="22" height="20" rx="5" fill="#BFE9FF"/>
+    <rect x="30" y="67" width="135" height="6" rx="3" fill="#ffffff" opacity="0.85"/>
+    <circle cx="60" cy="88" r="13" fill="#000"/><circle cx="60" cy="88" r="6" fill="#666"/>
+    <circle cx="140" cy="88" r="13" fill="#000"/><circle cx="140" cy="88" r="6" fill="#666"/>
+    <circle cx="188" cy="63" r="5" fill="#FFD54A"/>
+  </svg>
+</div>
+
+<script>
+(function(){
+
+  var track   = document.getElementById('tapsTrack');
+  var shuttle = document.getElementById('tapsShuttle');
+  var trail   = document.getElementById('tapsTrail');
+  var txt     = document.getElementById('tapsTxt');
+
+  var lines = [
+    "WELCOME TO TAPS SHUTTLES",
+    "MATAMATA-PIAKO BASED SERVICE — DOOR TO DOOR DIRECT",
+    "HAMILTON AIRPORT → TE AROHA FROM $110",
+    "HAMILTON AIRPORT → MORRINSVILLE FROM $110",
+    "HAMILTON AIRPORT → MATAMATA FROM $120",
+    "TE AROHA → AUCKLAND AIRPORT FROM $230",
+    "SEE OUR SUPER DEALS FOR MORE LOCATIONS BELOW!! ✈️"
+  ];
+
+  /* ===== TUNE ===== */
+  var legMs       = 12000;  // bigger = slower
+  var pauseMs     = 350;
+  var padLeft     = 42;
+  var padRight    = 42;
+
+  var trailMax    = 720;    // maximum trail length
+  var bodyYRatio  = 0.60;   // vertical lock point on shuttle
+  var yNudge      = 0;
+
+  var anchorRatio = 0.45;   // anchor point on shuttle (0.40–0.50 best)
+
+  // ✅ direction-specific gaps (fixes “too far one way / too close the other”)
+  var gapWhenRight = 14;    // shuttle moving → (trail behind on left)
+  var gapWhenLeft  = 20;    // shuttle moving ← (trail behind on right)
+  /* ============== */
+
+  var dir = 1;      // 1 = right, -1 = left
+  var idx = 0;
+  var start = performance.now();
+  var waitUntil = 0;
+
+  txt.textContent = lines[0];
+
+  function easeInOut(t){
+    return 0.5 - 0.5 * Math.cos(Math.PI * t);
+  }
+
+  function setLine(i){
+    idx = (i + lines.length) % lines.length;
+    txt.textContent = lines[idx];
+    trail.style.width = "0px";
+  }
+
+  function loop(now){
+
+    if(now < waitUntil){
+      requestAnimationFrame(loop);
+      return;
+    }
+
+    var trackW = track.clientWidth;
+
+    // shuttle width
+    var sr0 = shuttle.getBoundingClientRect();
+    var shuttleW = sr0.width || 72;
+
+    var minX = padLeft;
+    var maxX = Math.max(minX, trackW - shuttleW - padRight);
+
+    var t = (now - start) / legMs;
+    if(t > 1) t = 1;
+
+    var e = easeInOut(t);
+
+    // compute shuttle X
+    var travelT = (dir === 1) ? e : (1 - e);
+    var x = minX + (maxX - minX) * travelT;
+
+    shuttle.style.left = x + "px";
+    shuttle.style.transform = (dir === 1) ? "scaleX(1)" : "scaleX(-1)";
+
+    // lock trail Y to shuttle body
+    var sr = shuttle.getBoundingClientRect();
+    var tr = track.getBoundingClientRect();
+    var centerY = (sr.top - tr.top) + (sr.height * bodyYRatio) + yNudge;
+    var trailH = (trail.getBoundingClientRect().height || 30);
+    trail.style.top = Math.max(0, centerY - trailH/2) + "px";
+
+    // anchor point on shuttle
+    var anchor = x + shuttleW * anchorRatio;
+
+    // desired trail length
+    var desired = trailMax * e;
+
+    // compute available space behind shuttle, clamp so overlap is impossible
+    var available, gap;
+
+    if(dir === 1){
+      gap = gapWhenRight;
+
+      // trail ends at (anchor - gap), starts at minX
+      available = Math.max(0, (anchor - gap) - minX);
+      trail.style.textAlign = "right";
+      trail.style.left = minX + "px";
+    } else {
+      gap = gapWhenLeft;
+
+      // trail starts at (anchor + gap), ends at (maxX + shuttleW?) — use maxX+shuttleW edge
+      var rightEdge = maxX + shuttleW; // farthest visible point for trail
+      available = Math.max(0, rightEdge - (anchor + gap));
+      trail.style.textAlign = "left";
+      trail.style.left = (anchor + gap) + "px";
+    }
+
+    var w = Math.min(desired, available);
+    trail.style.width = w + "px";
+
+    // end of leg
+    if(t >= 1){
+      dir *= -1;
+      start = now;
+      waitUntil = now + pauseMs;
+      setLine(idx + 1);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+
+})();
+</script>
+
 </body>
 </html>
